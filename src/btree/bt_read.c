@@ -554,13 +554,11 @@ skip_read:
 	 * Don't free WT_REF.page_las, there may be concurrent readers.
 	 */
 	if (final_state == WT_REF_MEM && ref->page_las != NULL &&
-	    (!ref->page_las->skew_newest || ref->page_las->has_prepares)) {
-		ret = __wt_las_remove_block(
-		    session, ref->page_las->las_pageid);
-		WT_ERR(ret);
-	}
+	    (!ref->page_las->skew_newest || ref->page_las->has_prepares))
+		WT_ERR(__wt_las_remove_block(
+		    session, ref->page_las->las_pageid));
 
-	WT_REF_SETSTATE(ref, final_state);
+	WT_REF_SET_STATE(ref, final_state);
 	return (ret);
 
 err:	/*
@@ -570,7 +568,7 @@ err:	/*
 	 */
 	if (ref->page != NULL && previous_state != WT_REF_LIMBO)
 		__wt_ref_out(session, ref);
-	WT_REF_SETSTATE(ref, previous_state);
+	WT_REF_SET_STATE(ref, previous_state);
 
 	__wt_buf_free(session, &tmp);
 

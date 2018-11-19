@@ -417,8 +417,14 @@ __cursor_row_slot_return(WT_CURSOR_BTREE *cbt, WT_ROW *rip, WT_UPDATE *upd)
 	 * Unpack the cell and deal with overflow and prefix-compressed keys.
 	 * Inline building simple prefix-compressed keys from a previous key,
 	 * otherwise build from scratch.
+	 *
+	 * Clear the key cell structure. It shouldn't be necessary (as far as I
+	 * can tell, and we don't do it in lots of other places), but disabling
+	 * shared builds (--disable-shared) results in the compiler complaining
+	 * about uninitialized field use.
 	 */
 	kpack = &_kpack;
+	memset(kpack, 0, sizeof(*kpack));
 	__wt_cell_unpack(cell, kpack);
 	if (kpack->type == WT_CELL_KEY &&
 	    cbt->rip_saved != NULL && cbt->rip_saved == rip - 1) {
@@ -466,4 +472,31 @@ value:
 	/* Else, take the value from the original page cell. */
 	__wt_row_leaf_value_cell(page, rip, kpack, vpack);
 	return (__wt_page_cell_data_ref(session, cbt->ref->page, vpack, vb));
+}
+/*
+ * __cursor_check_prepared_update --
+ *	Return whether prepared update at current position is visible or not.
+ */
+static inline int
+__cursor_check_prepared_update(WT_CURSOR_BTREE *cbt, bool *visiblep)
+{
+	WT_SESSION_IMPL *session;
+	WT_UPDATE *upd;
+
+	session = (WT_SESSION_IMPL *)cbt->iface.session;
+	/*
+	 * When retrying an operation due to a prepared conflict, the cursor is
+	 * at an update list which resulted in conflict. So, when retrying we
+	 * should examine the same update again instead of iterating to the next
+	 * object. We'll eventually find a valid update, else return
+	 * prepare-conflict until resolved.
+	 */
+	WT_RET(__wt_cursor_valid(cbt, &upd, visiblep));
+
+	/* The update that returned prepared conflict is now visible. */
+	F_CLR(cbt, WT_CBT_ITERATE_RETRY_NEXT | WT_CBT_ITERATE_RETRY_PREV);
+	if (*visiblep)
+		WT_RET(__cursor_kv_return(session, cbt, upd));
+
+	return (0);
 }

@@ -1343,14 +1343,14 @@ __rec_txn_read(WT_SESSION_IMPL *session, WT_RECONCILE *r,
 		 * globally visible, need to check the update state as well.
 		 */
 		if (F_ISSET(r, WT_REC_EVICT)) {
-		       if (upd->prepare_state == WT_PREPARE_LOCKED ||
-			   upd->prepare_state == WT_PREPARE_INPROGRESS)
-			       prepared = true;
+			if (upd->prepare_state == WT_PREPARE_LOCKED ||
+			    upd->prepare_state == WT_PREPARE_INPROGRESS)
+				prepared = true;
 
-		       if (F_ISSET(r, WT_REC_VISIBLE_ALL) ?
-			   WT_TXNID_LE(r->last_running, txnid) :
-			   !__txn_visible_id(session, txnid))
-			       uncommitted = r->update_uncommitted = true;
+			if (F_ISSET(r, WT_REC_VISIBLE_ALL) ?
+			    WT_TXNID_LE(r->last_running, txnid) :
+			    !__txn_visible_id(session, txnid))
+				uncommitted = r->update_uncommitted = true;
 
 		       if (prepared || uncommitted)
 			       continue;
@@ -1780,7 +1780,7 @@ __rec_child_modify(WT_SESSION_IMPL *session,
 			    &ref->state, WT_REF_DELETED, WT_REF_LOCKED))
 				break;
 			ret = __rec_child_deleted(session, r, ref, statep);
-			WT_REF_SETSTATE(ref, WT_REF_DELETED);
+			WT_REF_SET_STATE(ref, WT_REF_DELETED);
 			goto done;
 
 		case WT_REF_LOCKED:

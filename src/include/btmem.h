@@ -896,12 +896,40 @@ struct __wt_ref {
 
 	WT_PAGE_DELETED	  *page_del;	/* Deleted page information */
 	WT_PAGE_LOOKASIDE *page_las;	/* Lookaside information */
+
+#ifdef HAVE_DIAGNOSTIC
+	/* Capture history of ref state changes. */
+	struct __wt_ref_hist {
+		WT_SESSION_IMPL *session;
+		const char *name;
+		const char *file;
+		int line;
+		uint32_t state;
+	} hist[3];
+	uint64_t histoff;
+#define	WT_REF_SET_STATE(ref, s) do {					\
+	(ref)->hist[(ref)->histoff].session = session;			\
+	(ref)->hist[(ref)->histoff].name = session->name;		\
+	(ref)->hist[(ref)->histoff].file = __FILE__;			\
+	(ref)->hist[(ref)->histoff].line = __LINE__;			\
+	(ref)->hist[(ref)->histoff].state = s;				\
+	(ref)->histoff =						\
+	    ((ref)->histoff + 1) % WT_ELEMENTS((ref)->hist);		\
+	WT_PUBLISH((ref)->state, s);					\
+} while (0)
+#else
+#define	WT_REF_SET_STATE(ref, s) WT_PUBLISH((ref)->state, s)
+#endif
 };
 /*
  * WT_REF_SIZE is the expected structure size -- we verify the build to ensure
  * the compiler hasn't inserted padding which would break the world.
  */
-#define	WT_REF_SIZE	56 + 3*32 + 8
+#ifdef HAVE_DIAGNOSTIC
+#define	WT_REF_SIZE	(56 + 3 * sizeof(WT_REF_HIST) + 8)
+#else
+#define	WT_REF_SIZE	56
+#endif
 
 /*
  * WT_ROW --
